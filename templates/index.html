@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <style>
+      #container {
+        display: flex;
+        flex-direction: column;
+        align-items: left;
+      }
+
+      #input-section {
+        margin-top: 10px;
+      }
+
+      #chatbox span {
+        white-space: pre-wrap;
+      }
+    </style>
+
+    <h1>BannyGPT</h1>
+    <div id="container">
+      <div id="chatbox">
+        <!-- Chat messages will go here -->
+      </div>
+      <div id="input-section">
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.socket.io/4.6.0/socket.io.min.js"
+      integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const socket = io();
+      const chatbox = document.getElementById("chatbox");
+      const userInput = document.getElementById("user-input");
+
+      let currentMessageContainer;
+
+      socket.on("next_token", function (msg) {
+        if (msg.is_new_message) {
+          currentMessageContainer = document.createElement("span");
+          currentMessageContainer.textContent = "BannyGPT: ";
+          chatbox.appendChild(currentMessageContainer);
+        }
+
+        let messagePart = document.createTextNode(msg.message);
+
+        currentMessageContainer.appendChild(messagePart);
+        console.log(msg.message);
+      });
+
+      userInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      function sendMessage() {
+        const message = userInput.value;
+        const messageContainer = document.createElement("span");
+        const content = document.createTextNode(`You: ${message}\n`);
+        messageContainer.appendChild(content);
+        chatbox.appendChild(messageContainer);
+        userInput.value = "";
+        socket.emit("send_message", { message });
+      }
+    </script>
+  </body>
+</html>
