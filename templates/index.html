@@ -2,31 +2,103 @@
 <html>
   <body>
     <style>
-      #container {
-        display: flex;
-        flex-direction: column;
-        align-items: left;
+      @font-face {
+        font-family: "Capsules";
+        src: url("{{ url_for("static", filename="/Capsules.woff2") }}")
+          format("woff2");
       }
-
-      #input-section {
-        margin-top: 10px;
+      * {
+        box-sizing: border-box;
+        font-family: "Capsules", monospace;
       }
-
-      #chatbox span {
+      body {
+        background-color: #1f1f1f;
+        color: #e0e0e0;
+        padding: 20px;
+        height: 100vh;
+        margin: 0;
+      }
+      h1 {
+        color: #f8f8f2;
+      }
+      #chatbox {
+        border-top: 1px solid #3e3e3e;
+        padding: 12px 0;
+      }
+      #chatbox > div {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
         white-space: pre-wrap;
+      }
+      #chatbox .you {
+        background-color: #505050;
+      }
+      #chatbox .bannygpt {
+        background-color: #3e3e3e;
+      }
+      #input-section {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, -15px);
+
+        width: 95vw;
+        display: flex;
+        padding: 20px;
+        background-color: #282828;
+        border-radius: 10px;
+      }
+      a {
+        color: #ff52ff;
+      }
+      textarea {
+        flex: 1;
+        margin-right: 10px;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #505050;
+        color: #e0e0e0;
+        resize: none;
+      }
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #a040a0;
+        color: #e0e0e0;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #505050;
+      }
+      .label {
+        font-weight: bold;
+        color: #ff52ff;
+      }
+      #down-arrow {
+        position: fixed;
+        right: 20px;
+        font-size: 30px;
+        padding: 2px 10px;
       }
     </style>
 
     <h1>BannyGPT</h1>
-    <div id="container">
-      <div id="chatbox">
-        <!-- Chat messages will go here -->
-      </div>
-      <div id="input-section">
-        <input type="text" id="user-input" placeholder="Type a message..." />
-        <button onclick="sendMessage()">Send</button>
-      </div>
+    <div id="chatbox"></div>
+    <button id="down-arrow" onclick="scrollToBottom()" style="display: none">
+      ↓
+    </button>
+    <div id="input-section">
+      <textarea
+        id="user-input"
+        placeholder="Type a message..."
+        rows="1"
+      ></textarea>
+      <button id="user-button" onclick="sendMessage()">Send</button>
     </div>
+    <div id="scroll-anchor"></div>
 
     <script
       src="https://cdn.socket.io/4.6.0/socket.io.min.js"
@@ -37,38 +109,132 @@
       const socket = io();
       const chatbox = document.getElementById("chatbox");
       const userInput = document.getElementById("user-input");
+      const userButton = document.getElementById("user-button");
+      const downArrow = document.getElementById("down-arrow");
+      const scrollAnchor = document.getElementById("scroll-anchor");
+
+      function sendMessage() {
+        const message = userInput.value;
+        userInput.value = "";
+        userInput.style.height = "auto";
+        userInput.disabled = true;
+        userButton.disabled = true;
+
+        const messageContainer = document.createElement("div");
+        messageContainer.classList.add("you");
+
+        const label = document.createElement("span");
+        label.textContent = "YOU ";
+        label.classList.add("label");
+        messageContainer.appendChild(label);
+
+        const messageContent = document.createTextNode(message);
+        messageContainer.appendChild(messageContent);
+
+        chatbox.appendChild(messageContainer);
+
+        scrollToBottom();
+
+        socket.emit("send_message", { message });
+      }
 
       let currentMessageContainer;
-
       socket.on("next_token", function (msg) {
         if (msg.is_new_message) {
-          currentMessageContainer = document.createElement("span");
-          currentMessageContainer.textContent = "BannyGPT: ";
+          currentMessageContainer = document.createElement("div");
+          currentMessageContainer.classList.add("bannygpt");
+          currentMessageContainer.textContent = "";
+
+          const label = document.createElement("span");
+          label.textContent = "ʙᴀɴɴʏɢᴘᴛ ";
+          currentMessageContainer.appendChild(label);
+
           chatbox.appendChild(currentMessageContainer);
         }
 
         let messagePart = document.createTextNode(msg.message);
 
         currentMessageContainer.appendChild(messagePart);
-        console.log(msg.message);
+
+        scrollToBottom();
       });
 
+      socket.on("end_of_response", function () {
+        const lastMessage = chatbox.lastChild;
+        let convertedMessage = lastMessage.textContent;
+        // Turn backtick-enclosed block into monospace font
+        convertedMessage = convertedMessage.replace(
+          /```([^`]*)```/g,
+          '<pre style="font-family: monospace;">$1</pre>'
+        );
+
+        // Turn backtick-enclosed text into monospace font
+        convertedMessage = convertedMessage.replace(
+          /`([^`]*)`/g,
+          '<span style="font-family: monospace;">$1</span>'
+        );
+
+        // If no Markdown links are present, turn URLs into actual hyperlinks
+        if (!/\[([^\]]+)\]\(([^)]+)\)/g.test(convertedMessage)) {
+          convertedMessage = convertedMessage.replace(
+            /(https?:\/\/[^\s]+)/g,
+            '<a href="$1">$1</a>'
+          );
+        }
+
+        // Turn markdown links into actual hyperlinks
+        convertedMessage = convertedMessage.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2">$1</a>'
+        );
+
+        // Update the innerHTML with the newly converted message
+        currentMessageContainer.innerHTML = convertedMessage;
+
+        userInput.disabled = false;
+        userButton.disabled = false;
+      });
+
+      // Input handling
       userInput.addEventListener("keydown", function (event) {
-        if (event.key === "Enter") {
+        if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
           sendMessage();
+          userInput.dispatchEvent(new Event("input"));
         }
       });
 
-      function sendMessage() {
-        const message = userInput.value;
-        const messageContainer = document.createElement("span");
-        const content = document.createTextNode(`You: ${message}\n`);
-        messageContainer.appendChild(content);
-        chatbox.appendChild(messageContainer);
-        userInput.value = "";
-        socket.emit("send_message", { message });
+      // Resize input section
+      userInput.addEventListener("input", () => {
+        userInput.style.height = userInput.scrollHeight + "px";
+        downArrow.style.bottom = userInput.scrollHeight + 60 + "px";
+        chatbox.style.paddingBottom = userInput.scrollHeight + 58 + "px";
+      });
+
+      // Size input box on load
+      userInput.dispatchEvent(new Event("input"));
+
+      // Autoscrolling
+      function scrollToBottom() {
+        scrollAnchor.scrollIntoView();
+        downArrow.style.display = "none";
       }
+
+      function isScrolledIntoView(el) {
+        const rect = el.getBoundingClientRect();
+        const elemTop = rect.top;
+        const elemBottom = rect.bottom;
+
+        // Only completely visible elements return true:
+        const isVisible = elemTop >= 0 && elemBottom <= window.innerHeight;
+        return isVisible;
+      }
+
+      document.addEventListener("scroll", function () {
+        downArrow.style.display = isScrolledIntoView(scrollAnchor)
+          ? "none"
+          : "block";
+      });
     </script>
   </body>
 </html>

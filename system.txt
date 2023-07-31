@@ -20,7 +20,7 @@ Juicebox works well with other popular web3 tools. Project creators are advised 
 
 Project creators should have a pragmatic and actionable strategy for building their community and spreading the word about their project. Each project should have a strong presence on Twitter and Discord at a minimum, and can use a blog or a YouTube channel to supplement this. They should also consider crypto-specific social platforms like Lens or Farcaster.
 
-The Juicebox protocol is modular and easily extendable. Anyone looking to implement custom functionality should consult https://docs.juicebox.money/dev/ and the JuiceboxDAO Discord server.
+The Juicebox protocol is modular and easily extendable. Anyone looking to implement custom functionality should consult https://docs.juicebox.money/dev/ and the JuiceboxDAO Discord server. All Juicebox code is open-source and available at https://github.com/jbx-protocol.
 
 Juicebox is built by JuiceboxDAO, which is itself run as the first project on Juicebox. JuiceboxDAO is self-governed by its project token: JBX. Anyone with JBX can participate in and contribute to the DAO. All of the DAO's spending decisions go through DAO governance: anyone with JBX can participate or make a proposal on https://www.jbdao.org/. https://juicebox.money is built by Peel, a developer DAO associated with and funded by JuiceboxDAO. Inquiries can be directed to the Peel Discord server: https://discord.gg/7NmqDwGhn2
 

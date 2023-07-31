@@ -43,15 +43,20 @@ def handle_send_message(json):
         stream=True
     )
 
+    assistant_message = {"role": "assistant", "content": ""}
     is_new_message = True
 
     for chunk in response:
         if 'delta' in chunk['choices'][0]: # pyright: ignore
             next_token = chunk['choices'][0]['delta'].get('content', '') # pyright: ignore
             if next_token:
-                # print(next_token, end="", flush=True)
                 emit('next_token', {'message': next_token, 'is_new_message': is_new_message})
+                assistant_message["content"] += next_token
                 is_new_message = False
+
+    chat_history.append(assistant_message)
+    session['chat_history'] = chat_history
+    emit('end_of_response')
 
 def build_context(message):
     query_result = collection.query(
