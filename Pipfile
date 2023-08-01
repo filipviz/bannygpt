@@ -10,6 +10,9 @@ openai = "*"
 chromadb = "*"
 flask-socketio = "*"
 pandas = "*"
+gunicorn = "*"
+gevent = "*"
+gevent-websocket = "*"
 
 [dev-packages]
 
