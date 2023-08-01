@@ -14,7 +14,7 @@ with open("./system.txt", 'r') as file:
 openai.api_key = os.getenv("OPENAI_API_KEY")
 app = Flask(__name__)
 app.secret_key = os.getenv("APP_SECRET_KEY")
-socketio = SocketIO(app, async_mode='gevent')
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins=["https://banny.club", "http://banny.club"])
 
 max_tokens = 4096
 model="gpt-3.5-turbo"
