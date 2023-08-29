@@ -1,9 +1,5 @@
-flask
 tiktoken
 openai
 chromadb
-flask-socketio
-pandas
-gunicorn
-gevent
-gevent-websocket
+fastapi
+uvicorn

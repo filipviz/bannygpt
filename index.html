@@ -42,7 +42,6 @@
         bottom: 0;
         left: 50%;
         transform: translate(-50%, -15px);
-
         width: 95vw;
         display: flex;
         padding: 20px;
@@ -100,13 +99,10 @@
     </div>
     <div id="scroll-anchor"></div>
 
-    <script
-      src="https://cdn.socket.io/4.6.0/socket.io.min.js"
-      integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
-      crossorigin="anonymous"
-    ></script>
     <script>
-      const socket = io();
+      const protocol = window.location.protocol === "https" ? "wss" : "ws";
+      const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+
       const chatbox = document.getElementById("chatbox");
       const userInput = document.getElementById("user-input");
       const userButton = document.getElementById("user-button");
@@ -135,31 +131,40 @@
 
         scrollToBottom();
 
-        socket.emit("send_message", { message });
+        ws.send(JSON.stringify({
+          messages: [{ role: "user", content: message }],
+        }));
       }
 
       let currentMessageContainer;
-      socket.on("next_token", function (msg) {
-        if (msg.is_new_message) {
-          currentMessageContainer = document.createElement("div");
-          currentMessageContainer.classList.add("bannygpt");
-          currentMessageContainer.textContent = "";
+      ws.onopen = () => {
+        ws.onmessage = (msg) => {
+          console.log(msg)
+          if (msg.data === "end_of_message") {
+            endOfMessage();
+            return;
+          }
 
-          const label = document.createElement("span");
-          label.textContent = "ʙᴀɴɴʏɢᴘᴛ ";
-          currentMessageContainer.appendChild(label);
+          let msg_data = JSON.parse(msg.data);
 
-          chatbox.appendChild(currentMessageContainer);
-        }
+          if (msg_data.is_new_message) {
+            currentMessageContainer = document.createElement("div");
+            currentMessageContainer.classList.add("bannygpt");
+            currentMessageContainer.textContent = "";
 
-        let messagePart = document.createTextNode(msg.message);
+            const label = document.createElement("span");
+            label.textContent = "ʙᴀɴɴʏɢᴘᴛ ";
+            currentMessageContainer.appendChild(label);
+            chatbox.appendChild(currentMessageContainer);
+          }
 
-        currentMessageContainer.appendChild(messagePart);
+          let messagePart = document.createTextNode(msg_data.token);
+          currentMessageContainer.appendChild(messagePart);
+          scrollToBottom();
+        };
+      };
 
-        scrollToBottom();
-      });
-
-      socket.on("end_of_response", function () {
+      function endOfMessage() {
         const lastMessage = chatbox.lastChild;
         let convertedMessage = lastMessage.textContent;
         // Turn backtick-enclosed block into monospace font
@@ -190,10 +195,9 @@
 
         // Update the innerHTML with the newly converted message
         currentMessageContainer.innerHTML = convertedMessage;
-
         userInput.disabled = false;
         userButton.disabled = false;
-      });
+      }
 
       // Input handling
       userInput.addEventListener("keydown", function (event) {
